@@ -13,13 +13,13 @@ public class Server {
 	private static String db_con_user = "parkings";
 	private static String db_con_pass = "parkings_pass";
 	
-	private static int server_port = 8036;
+	public static int port = 8036;
 
 	public static void main(String[] args) {
 		try {
 			Connection db_con = DriverManager.getConnection( db_con_url, db_con_user, db_con_pass );
 			
-			ServerSocket ss = new ServerSocket(server_port);
+			ServerSocket ss = new ServerSocket(port);
 			Socket client_soc;
 			while((client_soc = ss.accept()) != null){
 				ClientThread ct = new ClientThread(client_soc,db_con);
