@@ -1,6 +1,5 @@
 package tu.db.server;
 
-import java.awt.BorderLayout;
 import java.awt.EventQueue;
 
 import javax.swing.JFrame;
@@ -13,11 +12,22 @@ import javax.swing.JComboBox;
 import javax.swing.DefaultComboBoxModel;
 import javax.swing.JTextArea;
 import javax.swing.JButton;
-import javax.swing.JTable;
-import javax.swing.table.DefaultTableModel;
+
+
+
+
+
+
+
+
+
+
+
 
 import java.awt.event.ActionListener;
 import java.awt.event.ActionEvent;
+import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
@@ -25,6 +35,7 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.Socket;
 import java.net.UnknownHostException;
+import java.util.ArrayList;
 
 import javax.swing.JTextPane;
 
@@ -34,12 +45,15 @@ public class ClientPanel extends JFrame {
 	private JTextField CarNumber;
 	private JTextField CarCompany;
 	private JTextField CarModel;
-	private JTable table;
 	
 	private ObjectInputStream din;
 	private ObjectOutputStream dout;
 	private Socket soc;
 	static String host="localhost";
+	
+	private JTextPane SystemMessage;
+	
+	private ArrayList<Company> companies;
 
 	/**
 	 * Launch the application.
@@ -63,8 +77,19 @@ public class ClientPanel extends JFrame {
 	public ClientPanel() {
 		try {
 			soc = new Socket(host,Server.port);
-			din=new ObjectInputStream(soc.getInputStream());
-			dout= new ObjectOutputStream(soc.getOutputStream());
+			
+			dout= new ObjectOutputStream(new BufferedOutputStream(soc.getOutputStream()));
+			dout.flush();
+			System.out.println("dout inited...");
+			din = new ObjectInputStream(new BufferedInputStream(soc.getInputStream()));
+			System.out.println("din inited...");
+			
+			
+//			dout.flush();
+			//din=new ObjectInputStream(soc.getInputStream());
+			//dout.flush();
+//			din.readInt();
+
 			
 			setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 			setBounds(100, 100, 641, 399);
@@ -122,13 +147,17 @@ public class ClientPanel extends JFrame {
 			Description.setBounds(144, 135, 86, 69);
 			contentPane.add(Description);
 			
-			final JTextPane SystemMessage = new JTextPane();
+			SystemMessage = new JTextPane();
 			SystemMessage.setBounds(10, 290, 564, 59);
 			contentPane.add(SystemMessage);
 			
 			JLabel SystemMessageLabel = new JLabel("System Message:");
 			SystemMessageLabel.setBounds(10, 265, 100, 20);
 			contentPane.add(SystemMessageLabel);
+			
+			JTextPane RowsText = new JTextPane();
+			RowsText.setBounds(240, 11, 375, 268);
+			contentPane.add(RowsText);
 			
 			JButton SubmitButton = new JButton("Submit");
 			SubmitButton.addActionListener(new ActionListener() {
@@ -142,25 +171,27 @@ public class ClientPanel extends JFrame {
 					r.violation_type = (String) ViolationType.getSelectedItem();
 					r.description = Description.getText();
 					
-					if(r.number == ""){
-						msg(SystemMessage,"Provide the registration number of the vehicle.");
+					if(r.number.isEmpty()){
+						msg("Provide the registration number of the vehicle.");
 						error = true;
 					}
-					if(r.company == ""){
-						msg(SystemMessage,"Provide the car make of the vehicle.");
+					if(r.company.isEmpty()){
+						msg("Provide the car make of the vehicle.");
 						error = true;
 					}
-					if(r.model == ""){
-						msg(SystemMessage,"Provide the car model of the vehicle.");
+					if(r.model.isEmpty()){
+						msg("Provide the car model of the vehicle.");
 						error = true;
 					}
-					if(r.description == ""){
-						msg(SystemMessage,"Provide a description of the violation.");
+					if(r.description.isEmpty()){
+						msg("Provide a description of the violation.");
 						error = true;
 					}
 					if(!error){
 						try {
-							dout.writeObject(r);
+							dout.writeUTF("register");
+							dout.flush();
+//							dout.writeObject(r);
 						} catch (IOException e) {
 							// TODO Auto-generated catch block
 							e.printStackTrace();
@@ -171,17 +202,28 @@ public class ClientPanel extends JFrame {
 			SubmitButton.setBounds(144, 215, 86, 30);
 			contentPane.add(SubmitButton);
 			
-			table = new JTable();
-			table.setModel(new DefaultTableModel(
-				new Object[][] {
-				},
-				new String[] {
-					"Date. Time.", "Reg. Number", "Make", "Model", "Viol. Type"
+			JButton ConnectButton = new JButton("Connect");
+			ConnectButton.addActionListener(new ActionListener() {
+				public void actionPerformed(ActionEvent e) {
+					try {
+						dout.writeUTF("get_companies");
+						dout.flush();
+						ArrayList<Company> companies = new ArrayList<Company>();
+						int size;
+						size = din.readInt();
+						msg("Size is "+size);
+						for(int i =0;i < size;i++){
+							String c = din.readUTF();
+							msg("Company received with name:"+c);
+						}
+					} catch (IOException e1) {
+						// TODO Auto-generated catch block
+						e1.printStackTrace();
+					}
 				}
-			));
-			table.setBounds(281, 14, 293, 231);
-			contentPane.add(table);
-			
+			});
+			ConnectButton.setBounds(10, 219, 89, 23);
+			contentPane.add(ConnectButton);
 		} catch (UnknownHostException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -190,8 +232,8 @@ public class ClientPanel extends JFrame {
 			e.printStackTrace();
 		}
 	}
-	
-	private void msg(JTextPane o,String msg){
-		o.setText(msg);
+
+	private void msg(String msg){
+		SystemMessage.setText(msg+ "\r\n"+SystemMessage.getText());
 	}
 }

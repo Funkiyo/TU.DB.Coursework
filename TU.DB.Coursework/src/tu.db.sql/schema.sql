@@ -40,3 +40,5 @@ CREATE TABLE `register` (
         REFERENCES `cars`(`reg_num`)
 ) ENGINE = InnoDB;
 
+INSERT INTO car_companies(name) VALUES("company1"),("company2"),("company3"),("company4"),("company5"),("company6");
+INSERT INTO car_models(name,company_id) VALUES ("model11",1),("model12",1),("model13",1),("model21",2),("model22",2),("model31",3)("model32");

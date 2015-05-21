@@ -21,6 +21,7 @@ public class Server {
 			
 			ServerSocket ss = new ServerSocket(port);
 			Socket client_soc;
+			System.out.println("Listening for clients...");
 			while((client_soc = ss.accept()) != null){
 				ClientThread ct = new ClientThread(client_soc,db_con);
 				ct.start();
