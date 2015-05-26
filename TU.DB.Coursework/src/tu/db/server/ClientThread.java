@@ -47,25 +47,29 @@ public class ClientThread extends Thread{
 				String action = s_in.readUTF();
 				System.out.println("action is "+action);
 				switch(action){
-				case "get_companies":{
-					ArrayList<Company> companies = getCompanies();
-					int size = companies.size();
-					System.out.println("size is "+ size);
-					s_out.writeInt(size);
-					for(int i =0;i< size;i++){
-						s_out.writeObject(companies.get(i));
+					case "get_companies":{
+						ArrayList<Company> companies = getCompanies();
+						s_out.writeObject(companies);
 						s_out.flush();
+						break;
 					}
-					break;
-				}
-				case "register":{
-//					Record r = (Record) s_in.readObject();
-//					registerCar(r);
-					break;
-				}
-				case "display":{
-					break;
-				}
+					case "get_models":{
+						int company_id = s_in.readInt();
+						ArrayList<Model> models = getModels(company_id);
+						s_out.writeObject(models);
+						s_out.flush();
+						break;
+					}
+					case "register":{
+						Record r = (Record) s_in.readObject();
+						System.out.println("Number received ... "+r.number);
+						
+						registerCar(r);
+						break;
+					}
+					case "display":{
+						break;
+					}
 				}
 			}
 		} catch (IOException e1) {
@@ -100,15 +104,40 @@ public class ClientThread extends Thread{
 		return companies;
 	}
 	
+	private ArrayList<Model> getModels(int company_id){
+		ArrayList<Model> models = new ArrayList<Model>();
+		try {
+			Statement st = db_con.createStatement();
+			ResultSet rs = st.executeQuery("SELECT id,name FROM car_models WHERE company_id = "+company_id);
+			while(rs.next()){
+				int id = rs.getInt("id");
+				String name = rs.getString("name");
+//				System.out.println("id "+id+" name"+ name);
+				Model m = new Model(id,company_id,name);
+				models.add(m);
+			}
+		} catch (SQLException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		return models;
+	}
+	
 	private boolean registerCar(Record r){
 		try {
 			Statement stmt = db_con.createStatement();
-			// TODO write register sql
-			String sql = "INSERT INTO register(car_num,time_entered,time_left,fine,description)";
-			stmt.executeUpdate(sql);
-			PreparedStatement sth = db_con.prepareStatement(sql);
+			
+			String insert_car = "INSERT INTO `cars`(`reg_num`, `model_id`) "
+					+ "VALUES ('"+r.number+"',(SELECT id FROM car_models cm WHERE cm.name = '"+r.model+"')) "
+					+ "ON DUPLICATE KEY UPDATE records_count = records_count + 1";
+			stmt = db_con.createStatement();
+			String insert_record = "INSERT INTO register(car_num,time_entered,description,fine) "
+					+ "VALUES('"+r.number+"',NOW(),'"+r.description+"',20)";
+			stmt.executeUpdate(insert_car);
+//			PreparedStatement sth = db_con.prepareStatement(sql);
 //	        sth.setString(building_id);
-	        sth.executeUpdate();
+//	        sth.executeUpdate();
+			stmt.executeUpdate(insert_record);
 	        
 			return true;
 		} catch (SQLException e) {

@@ -24,6 +24,9 @@ import javax.swing.JButton;
 
 
 
+
+
+
 import java.awt.event.ActionListener;
 import java.awt.event.ActionEvent;
 import java.io.BufferedInputStream;
@@ -43,8 +46,6 @@ public class ClientPanel extends JFrame {
 
 	private JPanel contentPane;
 	private JTextField CarNumber;
-	private JTextField CarCompany;
-	private JTextField CarModel;
 	
 	private ObjectInputStream din;
 	private ObjectOutputStream dout;
@@ -52,8 +53,11 @@ public class ClientPanel extends JFrame {
 	static String host="localhost";
 	
 	private JTextPane SystemMessage;
+	private JComboBox CarCompany;
+	private JComboBox CarModel;
 	
 	private ArrayList<Company> companies;
+	private ArrayList<Model> models;
 
 	/**
 	 * Launch the application.
@@ -84,6 +88,7 @@ public class ClientPanel extends JFrame {
 			din = new ObjectInputStream(new BufferedInputStream(soc.getInputStream()));
 			System.out.println("din inited...");
 			
+			get_car_companies();
 			
 //			dout.flush();
 			//din=new ObjectInputStream(soc.getInputStream());
@@ -113,20 +118,10 @@ public class ClientPanel extends JFrame {
 			CarCompanyLabel.setBounds(10, 42, 100, 20);
 			contentPane.add(CarCompanyLabel);
 			
-			CarCompany = new JTextField();
-			CarCompany.setBounds(144, 42, 86, 20);
-			contentPane.add(CarCompany);
-			CarCompany.setColumns(10);
-			
 			JLabel CarModelLabel = new JLabel("Car Model");
 			CarModelLabel.setHorizontalAlignment(SwingConstants.RIGHT);
 			CarModelLabel.setBounds(10, 73, 100, 20);
 			contentPane.add(CarModelLabel);
-			
-			CarModel = new JTextField();
-			CarModel.setBounds(144, 73, 86, 20);
-			contentPane.add(CarModel);
-			CarModel.setColumns(10);
 			
 			JLabel ViolationTypeLabel = new JLabel("Viol. Type");
 			ViolationTypeLabel.setHorizontalAlignment(SwingConstants.RIGHT);
@@ -155,9 +150,19 @@ public class ClientPanel extends JFrame {
 			SystemMessageLabel.setBounds(10, 265, 100, 20);
 			contentPane.add(SystemMessageLabel);
 			
-			JTextPane RowsText = new JTextPane();
-			RowsText.setBounds(240, 11, 375, 268);
-			contentPane.add(RowsText);
+			CarCompany = new JComboBox();
+			CarCompany.addActionListener(new ActionListener() {
+				public void actionPerformed(ActionEvent arg0) {
+					get_car_models();
+				}
+			});
+			loadComboBoxCompanies();
+			CarCompany.setBounds(144, 42, 86, 20);
+			contentPane.add(CarCompany);
+			
+			CarModel = new JComboBox();
+			CarModel.setBounds(144, 73, 86, 20);
+			contentPane.add(CarModel);
 			
 			JButton SubmitButton = new JButton("Submit");
 			SubmitButton.addActionListener(new ActionListener() {
@@ -166,8 +171,8 @@ public class ClientPanel extends JFrame {
 					
 					Record r = new Record();
 					r.number = CarNumber.getText();
-					r.company = CarCompany.getText();
-					r.model = CarModel.getText();
+					r.company = (String) CarCompany.getSelectedItem();
+					r.model = (String)CarModel.getSelectedItem();
 					r.violation_type = (String) ViolationType.getSelectedItem();
 					r.description = Description.getText();
 					
@@ -191,7 +196,9 @@ public class ClientPanel extends JFrame {
 						try {
 							dout.writeUTF("register");
 							dout.flush();
-//							dout.writeObject(r);
+							dout.writeObject(r);
+							dout.flush();
+							msg("Car successfully registered. .. ");
 						} catch (IOException e) {
 							// TODO Auto-generated catch block
 							e.printStackTrace();
@@ -202,28 +209,6 @@ public class ClientPanel extends JFrame {
 			SubmitButton.setBounds(144, 215, 86, 30);
 			contentPane.add(SubmitButton);
 			
-			JButton ConnectButton = new JButton("Connect");
-			ConnectButton.addActionListener(new ActionListener() {
-				public void actionPerformed(ActionEvent e) {
-					try {
-						dout.writeUTF("get_companies");
-						dout.flush();
-						ArrayList<Company> companies = new ArrayList<Company>();
-						int size;
-						size = din.readInt();
-						msg("Size is "+size);
-						for(int i =0;i < size;i++){
-							String c = din.readUTF();
-							msg("Company received with name:"+c);
-						}
-					} catch (IOException e1) {
-						// TODO Auto-generated catch block
-						e1.printStackTrace();
-					}
-				}
-			});
-			ConnectButton.setBounds(10, 219, 89, 23);
-			contentPane.add(ConnectButton);
 		} catch (UnknownHostException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -231,6 +216,69 @@ public class ClientPanel extends JFrame {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
+	}
+
+	private void get_car_companies() {
+		try {
+			dout.writeUTF("get_companies");
+			dout.flush();
+			this.companies = (ArrayList<Company>)din.readObject();
+//			System.out.println("Companies received...AASDAS"+this.companies.size());
+			
+		} catch (IOException  e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (ClassNotFoundException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+	}
+	
+	private void get_car_models() {
+		String s = (String)CarCompany.getSelectedItem();
+		int company_id = 0;
+		for(Company c : companies){
+			if(s.equals(c.name)){
+				company_id = c.id;
+				break;
+			}
+		}
+		if(company_id == 0){
+			msg("Select company.");
+			return;
+		}
+		try{
+			dout.writeUTF("get_models");
+			dout.flush();
+			dout.writeInt(company_id);
+			dout.flush();
+			this.models = (ArrayList<Model>)din.readObject();
+			loadComboBoxModels();
+		}catch(IOException e){
+			
+		}catch (ClassNotFoundException e) {
+			// TODO: handle exception
+		}
+	}
+	
+	private void loadComboBoxCompanies(){
+		ArrayList<String> companies_model = new ArrayList<String>();
+		companies_model.add("");
+		for(Company c : companies){
+			companies_model.add(c.toString());
+		}
+		CarCompany.setModel(new DefaultComboBoxModel(companies_model.toArray(new String[companies_model.size()])));
+	}
+	
+
+	
+	private void loadComboBoxModels(){
+		ArrayList<String> models_model = new ArrayList<String>();
+		for(Model c : models){
+			models_model.add(c.toString());
+		}
+		CarModel.setModel(new DefaultComboBoxModel(models_model.toArray(new String[models_model.size()])));
+//		CarCompany.repaint();
 	}
 
 	private void msg(String msg){

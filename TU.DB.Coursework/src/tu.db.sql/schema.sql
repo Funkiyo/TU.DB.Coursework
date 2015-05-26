@@ -25,6 +25,7 @@ CREATE TABLE `car_models`(
 CREATE TABLE `cars`(
     `reg_num` CHAR(10) NOT NULL,
     `model_id` INT UNSIGNED NOT NULL,
+    `records_count` TINYINT UNSIGNED NOT NULL DEFAULT 0,
     PRIMARY KEY (`reg_num`)
 ) ENGINE = InnoDB;
 
@@ -39,6 +40,3 @@ CREATE TABLE `register` (
     FOREIGN KEY (`car_num`)
         REFERENCES `cars`(`reg_num`)
 ) ENGINE = InnoDB;
-
-INSERT INTO car_companies(name) VALUES("company1"),("company2"),("company3"),("company4"),("company5"),("company6");
-INSERT INTO car_models(name,company_id) VALUES ("model11",1),("model12",1),("model13",1),("model21",2),("model22",2),("model31",3)("model32");
